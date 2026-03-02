@@ -37,6 +37,7 @@
 #include "director/lingo/lingo-codegen.h"
 #include "director/lingo/lingo-object.h"
 #include "director/lingo/lingo-the.h"
+#include "director/debugger/dt-internal.h"
 
 namespace Director {
 
@@ -1366,23 +1367,89 @@ void Debugger::varReadHook(const Common::String &name) {
 			}
 		}
 	}
+
+	// watch logging
+    if (!DT::_state || !DT::_state->_variables.contains(name))
+        return;
+
+    DT::ImGuiState::WatchLogEntry entry;
+    entry.varName = name;
+    entry.isWrite = false;
+
+	// dont use varfetch, it causes infinite recursion, then seg fault
+	entry.value = "(unknown)";
+	if (g_lingo->_state->localVars && g_lingo->_state->localVars->contains(name)) {
+		entry.value = formatStringForDump(g_lingo->_state->localVars->getVal(name).asString(true));
+	} else if (g_lingo->_globalvars.contains(name)) {
+		entry.value = formatStringForDump(g_lingo->_globalvars.getVal(name).asString(true));
+	}
+
+    // get script ref
+    if (!g_lingo->_state->callstack.empty()) {
+        CFrame *head = g_lingo->_state->callstack.back();
+        entry.scriptRef = DT::formatHandlerName(
+            head->sp.ctx->_scriptId,
+            head->sp.ctx->_id,
+            *head->sp.name,
+            head->sp.ctx->_scriptType,
+            false
+        );
+    }
+
+    DT::_state->_watchLog.push_back(entry);
+    if (DT::_state->_watchLog.size() > 100)
+        DT::_state->_watchLog.remove_at(0);
+
 }
 
 void Debugger::varWriteHook(const Common::String &name) {
-	if (name.empty())
-		return;
-	if (_bpCheckVarWrite) {
-		for (auto &it : g_lingo->getBreakpoints()) {
-			if (it.type == kBreakpointVariable && it.varWrite && it.varName.equalsIgnoreCase(name)) {
-				debugPrintf("Hit a breakpoint:\n");
-				debugPrintf("%s\n", it.format().c_str());
-				cmdScriptFrame(0, nullptr);
-				attach();
-				g_system->updateScreen();
-				break;
-			}
-		}
-	}
+    if (name.empty())
+        return;
+    if (_bpCheckVarWrite) {
+        for (auto &it : g_lingo->getBreakpoints()) {
+            if (it.type == kBreakpointVariable && it.varWrite && it.varName.equalsIgnoreCase(name)) {
+                debugPrintf("Hit a breakpoint:\n");
+                debugPrintf("%s\n", it.format().c_str());
+                cmdScriptFrame(0, nullptr);
+                attach();
+                g_system->updateScreen();
+                break;
+            }
+        }
+    }
+
+    // watch logging
+    if (!DT::_state || !DT::_state->_variables.contains(name))
+        return;
+
+    DT::ImGuiState::WatchLogEntry entry;
+    entry.varName = name;
+    entry.isWrite = true;
+
+    // dont use varFetch, causes infinite recursion
+    entry.value = "(unknown)";
+    if (g_lingo->_state->localVars && g_lingo->_state->localVars->contains(name)) {
+        entry.value = formatStringForDump(g_lingo->_state->localVars->getVal(name).asString(true));
+    } else if (g_lingo->_globalvars.contains(name)) {
+        entry.value = formatStringForDump(g_lingo->_globalvars.getVal(name).asString(true));
+    }
+
+    // get script ref
+    entry.scriptRef = "(unknown)";
+    if (!g_lingo->_state->callstack.empty()) {
+        CFrame *head = g_lingo->_state->callstack.back();
+        entry.scriptRef = DT::formatHandlerName(
+            head->sp.ctx->_scriptId,
+            head->sp.ctx->_id,
+            *head->sp.name,
+            head->sp.ctx->_scriptType,
+            false
+        );
+    }
+
+    DT::_state->_watchLog.push_back(entry);
+    if (DT::_state->_watchLog.size() > 100)
+        DT::_state->_watchLog.remove_at(0);
 }
 
 void Debugger::entityReadHook(int entity, int field) {

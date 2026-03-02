@@ -31,7 +31,7 @@ namespace DT {
 
 static void cacheVars() {
 	// take a snapshot of the variables every 500 ms
-	if ((g_director->getTotalPlayTime() - _state->_vars._lastTimeRefreshed) > 500) {
+	if ((g_director->getTotalPlayTime() - _state->_vars._lastTimeRefreshed) > 100) {
 		_state->_vars._prevLocals = _state->_vars._locals;
 		if (g_lingo->_state->localVars) {
 			_state->_vars._locals = *g_lingo->_state->localVars;
@@ -158,6 +158,33 @@ void showWatchedVars() {
 		if (_state->_variables.empty())
 			ImGui::Text("(no watched variables)");
 	}
+
+	// The watch log updates at varWriteHook and varReadHook in director/debugger.cpp
+	ImGui::Separator();
+	if (ImGui::CollapsingHeader("Watch Log")) {
+		if (ImGui::BeginChild("##watchlog", ImVec2(0, 150), true)) {
+			for (int i = (int)_state->_watchLog.size() - 1; i >= 0; i--) {
+				ImGuiState::WatchLogEntry &entry = _state->_watchLog[i];
+				ImVec4 color = entry.isWrite
+					? ImVec4(1.0f, 0.4f, 0.4f, 1.0f)   // red for writes
+					: ImVec4(0.4f, 1.0f, 0.4f, 1.0f);  // green for reads
+
+				ImGui::TextColored(color, "%s: '%s' value %s by %s",
+					entry.isWrite ? "Var write" : "Var read",
+					entry.varName.c_str(),
+					entry.value.c_str(),
+					entry.scriptRef.c_str());
+			}
+
+			if (_state->_watchLog.empty())
+				ImGui::Text("(no log entries)");
+		}
+		ImGui::EndChild();
+
+		if (ImGui::Button("Clear Log"))
+			_state->_watchLog.clear();
+	}
+
 	ImGui::End();
 }
 

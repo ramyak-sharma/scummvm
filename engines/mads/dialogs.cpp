@@ -26,7 +26,7 @@
 #include "mads/screen.h"
 #include "mads/msurface.h"
 #include "mads/nebular/dialogs_nebular.h"
-#ifdef MADSV2
+#ifdef ENABLE_MADSV2
 #include "mads/phantom/dialogs_phantom.h"
 #endif
 
@@ -457,7 +457,7 @@ Dialogs *Dialogs::init(MADSEngine *vm) {
 	switch (vm->getGameID()) {
 	case GType_RexNebular:
 		return new Nebular::DialogsNebular(vm);
-#ifdef MADSV2
+#ifdef ENABLE_MADSV2
 	case GType_Phantom:
 		return new Phantom::DialogsPhantom(vm);
 	case GType_Dragonsphere:
@@ -486,7 +486,7 @@ FullScreenDialog::FullScreenDialog(MADSEngine *vm) : _vm(vm) {
 		_screenId = 990;
 		break;
 	case GType_Phantom:
-		_screenId = 920;
+		_screenId = 0; // 920;
 		break;
 	case GType_Dragonsphere:
 		_screenId = 922;
@@ -514,6 +514,9 @@ void FullScreenDialog::display() {
 		SceneInfo *sceneInfo = SceneInfo::init(_vm);
 		sceneInfo->load(_screenId, 0, "", 0, scene._depthSurface, scene._backgroundSurface);
 		delete sceneInfo;
+	} else if (_screenId == 0) {
+		scene._backgroundSurface.create(MADS_SCREEN_WIDTH, MADS_SCREEN_HEIGHT);
+		scene._depthSurface.create(MADS_SCREEN_WIDTH, MADS_SCREEN_HEIGHT);
 	}
 
 	scene._priorSceneId = priorSceneId;
