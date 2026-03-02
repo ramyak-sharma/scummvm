@@ -920,18 +920,18 @@ static void drawLabelBar(ImDrawList *dl, ImVec2 pos, Score *score) {
 		// Draw label triangle and add tooltip
 		if (labelName && !labelName->empty()) {
 			float textY = y + (cfg._labelBarHeight - ImGui::GetTextLineHeight()) / 2.0f;
-
-			dl->AddText(ImVec2(x - ImGui::CalcTextSize(ICON_MS_BEENHERE).x / 2.0f, textY),
-						U32(_state->_colors._type_color), ICON_MS_BEENHERE);
-
 			float iconW = ImGui::CalcTextSize(ICON_MS_BEENHERE).x;
 			float textX = x + iconW / 2.0f + 2.0f;
-			float textWidth = ImGui::CalcTextSize(labelName->c_str()).x;
+			float textW = ImGui::CalcTextSize(labelName->c_str()).x;
+			float totalW = iconW + 2.0f + textW;
+			float iconX = x - iconW / 2.0f;
 
-			if (textX + textWidth < finalPos.x) // prevent text being drawn outside the table bounds
+			dl->AddRectFilled(ImVec2(iconX, y), ImVec2(iconX + totalW, y + cfg._labelBarHeight), cfg._tableDarkColor);
+			dl->AddText(ImVec2(x - ImGui::CalcTextSize(ICON_MS_BEENHERE).x / 2.0f, textY), U32(_state->_colors._type_color), ICON_MS_BEENHERE);
+
+			if (textX + textW < finalPos.x) // prevent text being drawn outside the table bounds
 				dl->AddText(ImVec2(textX, textY), U32(_state->_colors._type_color), labelName->c_str());
 
-			float px = pos.x + f * cfg._cellWidth;
 			ImGui::SetCursorScreenPos(ImVec2(pos.x + f * cfg._cellWidth, y));
 			ImGui::InvisibleButton(Common::String::format("##labelcell_%d", f).c_str(), ImVec2(cfg._cellWidth, cfg._labelBarHeight));
 
