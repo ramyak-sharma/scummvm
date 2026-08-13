@@ -3855,8 +3855,16 @@ void LB::b_inside(int nargs) {
 	Datum d;
 	Datum r2 = g_lingo->pop();
 	Datum p1 = g_lingo->pop();
-	TYPECHECK(r2, RECT);
-	TYPECHECK(p1, POINT);
+
+	// A point or rect may be given as a plain list; a bad argument yields FALSE.
+	bool pointOk = (p1.type == POINT || p1.type == ARRAY) && p1.u.farr && p1.u.farr->arr.size() >= 2;
+	bool rectOk = (r2.type == RECT || r2.type == ARRAY) && r2.u.farr && r2.u.farr->arr.size() >= 4;
+	if (!pointOk || !rectOk) {
+		warning("LB::b_inside(): expected a point and a rect, got %s and %s", p1.type2str(), r2.type2str());
+		d = 0;
+		g_lingo->push(d);
+		return;
+	}
 
 	Common::Rect rect2(r2.u.farr->arr[0].asInt(), r2.u.farr->arr[1].asInt(), r2.u.farr->arr[2].asInt(), r2.u.farr->arr[3].asInt());
 	Common::Point point1(p1.u.farr->arr[0].asInt(), p1.u.farr->arr[1].asInt());
